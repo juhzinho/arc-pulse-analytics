@@ -74,13 +74,18 @@ export default async function AddressPage({
   let summary: AddressSummary | null = null;
   let activity: AddressActivity | null = null;
   let counterparties: Counterparty[] = [];
+  let loadError: string | null = null;
 
   if (validAddress) {
-    [summary, activity, counterparties] = await Promise.all([
-      apiGet<AddressSummary>(`/v1/address/${address}/summary?window=${window}`),
-      apiGet<AddressActivity>(`/v1/address/${address}/activity?page=${page}&pageSize=20&window=${window}&direction=${direction}`),
-      apiGet<Counterparty[]>(`/v1/address/${address}/counterparties?window=${window}`)
-    ]);
+    try {
+      [summary, activity, counterparties] = await Promise.all([
+        apiGet<AddressSummary>(`/v1/address/${address}/summary?window=${window}`),
+        apiGet<AddressActivity>(`/v1/address/${address}/activity?page=${page}&pageSize=20&window=${window}&direction=${direction}`),
+        apiGet<Counterparty[]>(`/v1/address/${address}/counterparties?window=${window}`)
+      ]);
+    } catch {
+      loadError = "Unable to load address data for this filter right now. Try 7d or refresh in a moment.";
+    }
   }
 
   const totalPages = activity ? Math.max(1, Math.ceil(activity.total / activity.pageSize)) : 1;
@@ -136,6 +141,10 @@ export default async function AddressPage({
           <p className="text-[1rem] leading-7 text-ember">
             Enter a valid EVM address in the format <span className="font-semibold">0x...</span>.
           </p>
+        </Card>
+      ) : loadError ? (
+        <Card className="rounded-[28px]">
+          <p className="text-[1rem] leading-7 text-ember">{loadError}</p>
         </Card>
       ) : summary && activity ? (
         <>
