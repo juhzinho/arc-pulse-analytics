@@ -1,0 +1,19 @@
+{
+  "name": "arc-pulse-analytics",
+  "private": true,
+  "packageManager": "pnpm@10.6.2",
+  "devDependencies": {
+    "@prisma/client": "^6.5.0",
+    "prisma": "^6.5.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @arc-pulse/api --filter @arc-pulse/indexer --filter @arc-pulse/web dev",
+    "prisma:generate": "pnpm --filter @arc-pulse/api prisma:generate",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "migrate": "pnpm --filter @arc-pulse/api prisma:migrate",
+    "seed": "pnpm --filter @arc-pulse/api prisma:seed"
+  }
+}

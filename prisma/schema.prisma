@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MarketType {
+  binary
+  range
+}
+
+enum MarketMetric {
+  tps
+  gas_total
+  block_time
+  top_contract
+}
+
+enum MarketStatus {
+  open
+  resolved
+  cancelled
+}
+
+enum PredictionChoice {
+  YES
+  NO
+}
+
+model User {
+  id             String                @id @default(cuid())
+  email          String                @unique
+  role           UserRole              @default(USER)
+  createdAt      DateTime              @default(now())
+  sessions       Session[]
+  magicLinks     MagicLinkToken[]
+  predictions    Prediction[]
+  marketsCreated Market[]              @relation("MarketCreator")
+  snapshots      LeaderboardSnapshot[]
+  auditLogs      AuditLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MagicLinkToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model Block {
+  number       BigInt       @id
+  hash         String       @unique
+  parentHash   String
+  timestamp    DateTime
+  gasUsed      BigInt
+  gasLimit     BigInt
+  txCount      Int
+  baseFeePerGas BigInt?
+  createdAt    DateTime     @default(now())
+  transactions Transaction[]
+
+  @@index([timestamp])
+}
+
+model Transaction {
+  hash              String   @id
+  blockNumber       BigInt
+  blockTimestamp    DateTime
+  fromAddress       String
+  toAddress         String?
+  status            Boolean
+  gasUsed           BigInt
+  gasPrice          BigInt?
+  effectiveGasPrice BigInt?
+  inputSize         Int
+  value             String?
+  createdAt         DateTime @default(now())
+  block             Block     @relation(fields: [blockNumber], references: [number], onDelete: Cascade)
+
+  @@index([blockNumber])
+  @@index([blockTimestamp])
+  @@index([fromAddress])
+  @@index([toAddress])
+  @@index([status])
+}
+
+model MetricMinute {
+  bucketStart      DateTime @id
+  txCount          Int
+  blockCount       Int
+  tps              Float
+  gasTotal         BigInt
+  gasP50           BigInt
+  gasP95           BigInt
+  blockTimeAvg     Float
+  successRate      Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([bucketStart])
+}
+
+model MetricHour {
+  bucketStart      DateTime @id
+  txCount          Int
+  blockCount       Int
+  tps              Float
+  gasTotal         BigInt
+  gasP50           BigInt
+  gasP95           BigInt
+  blockTimeAvg     Float
+  successRate      Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([bucketStart])
+}
+
+model ContractStatWindow {
+  id        String   @id @default(cuid())
+  window    String
+  address   String
+  txCount   Int
+  gasTotal  BigInt
+  updatedAt DateTime @updatedAt
+
+  @@unique([window, address])
+  @@index([window, txCount(sort: Desc)])
+  @@index([window, gasTotal(sort: Desc)])
+  @@index([address])
+}
+
+model Market {
+  id           String        @id @default(cuid())
+  type         MarketType
+  metric       MarketMetric
+  title        String
+  description  String
+  windowStart  DateTime
+  windowEnd    DateTime
+  threshold    Float?
+  lowerBound   Float?
+  upperBound   Float?
+  status       MarketStatus  @default(open)
+  createdById  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  createdBy    User          @relation("MarketCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  predictions  Prediction[]
+  result       MarketResult?
+
+  @@index([status, windowEnd])
+  @@index([metric, status])
+}
+
+model Prediction {
+  id        String            @id @default(cuid())
+  marketId  String
+  userId    String
+  choice    PredictionChoice?
+  value     Float?
+  score     Float?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  market    Market            @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([marketId, userId])
+  @@index([userId, createdAt])
+}
+
+model MarketResult {
+  marketId       String   @id
+  resolvedValue  Float
+  outcome        String
+  resolvedAt     DateTime @default(now())
+  market         Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+}
+
+model LeaderboardSnapshot {
+  id        String   @id @default(cuid())
+  period    String
+  userId    String
+  score     Float
+  accuracy  Float
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([period, userId])
+  @@index([period, score(sort: Desc)])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  ip        String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+}
+
+model IndexerState {
+  id               String   @id
+  lastIndexedBlock BigInt   @default(0)
+  updatedAt        DateTime @updatedAt
+}

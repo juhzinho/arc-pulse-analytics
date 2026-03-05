@@ -1,0 +1,84 @@
+groups:
+  - name: arc-pulse-api
+    rules:
+      - alert: ArcPulseApiDown
+        expr: up{job="arc-pulse-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "Arc Pulse API is down"
+          description: "Prometheus cannot scrape the API metrics endpoint for more than 1 minute."
+
+      - alert: ArcPulseApiHighP95Latency
+        expr: histogram_quantile(0.95, sum(rate(arc_pulse_api_http_request_duration_ms_bucket[5m])) by (le, route)) > 1500
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Arc Pulse API high p95 latency"
+          description: "API p95 latency is above 1500ms for at least 10 minutes."
+
+      - alert: ArcPulseDatabaseUnhealthy
+        expr: arc_pulse_api_dependency_health{dependency="database"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "Arc Pulse database unhealthy"
+          description: "The API reported the database dependency as unhealthy for more than 2 minutes."
+
+      - alert: ArcPulseRedisUnhealthy
+        expr: arc_pulse_api_dependency_health{dependency="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "Arc Pulse Redis unhealthy"
+          description: "The API reported Redis as unhealthy for more than 2 minutes."
+
+  - name: arc-pulse-indexer
+    rules:
+      - alert: ArcPulseIndexerDown
+        expr: up{job="arc-pulse-indexer"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: indexer
+        annotations:
+          summary: "Arc Pulse indexer is down"
+          description: "Prometheus cannot scrape the indexer metrics endpoint for more than 1 minute."
+
+      - alert: ArcPulseIndexerLagHigh
+        expr: (arc_pulse_indexer_chain_head_block - arc_pulse_indexer_last_indexed_block) > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: indexer
+        annotations:
+          summary: "Arc Pulse indexer lag is high"
+          description: "Indexer lag stayed above 100 blocks for more than 10 minutes."
+
+      - alert: ArcPulseIndexerLoopFailures
+        expr: increase(arc_pulse_indexer_loop_failures_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: indexer
+        annotations:
+          summary: "Arc Pulse indexer loop failures detected"
+          description: "The indexer loop recorded one or more failures in the last 10 minutes."
+
+      - alert: ArcPulseAggregateRefreshFailures
+        expr: increase(arc_pulse_indexer_aggregate_refresh_failures_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: indexer
+        annotations:
+          summary: "Arc Pulse aggregate refresh failures detected"
+          description: "Aggregate refresh recorded one or more failures in the last 15 minutes."

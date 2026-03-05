@@ -1,0 +1,8 @@
+app = "arc-pulse-indexer"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.indexer"
+
+[env]
+  NODE_ENV = "production"
