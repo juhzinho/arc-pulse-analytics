@@ -244,6 +244,7 @@ DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
 METRICS_PORT=9100
 INDEXER_BOOTSTRAP_BLOCKS=5000
+INDEXER_FORCE_START_BLOCK=
 ```
 
 Release flow for API:
@@ -265,6 +266,7 @@ Notes:
 - Redis 6+ is required for real runtime because BullMQ and Redis-backed rate limiting depend on commands not available in Redis 3.x.
 - The API remains stateless. Run multiple replicas behind a proxy if traffic grows.
 - The indexer should run as a single worker instance unless you add explicit shard coordination.
+- For historical backfill, set `INDEXER_FORCE_START_BLOCK=0` once, wait until it catches up, then remove it.
 
 ### Fly.io quick start
 

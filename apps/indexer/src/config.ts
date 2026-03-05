@@ -19,5 +19,6 @@ export const config = z.object({
   INDEXER_CONFIRMATIONS: z.coerce.number().default(2),
   INDEXER_POLL_INTERVAL_MS: z.coerce.number().default(5000),
   INDEXER_START_BLOCK: z.coerce.bigint().optional(),
+  INDEXER_FORCE_START_BLOCK: z.coerce.bigint().optional(),
   INDEXER_BOOTSTRAP_BLOCKS: z.coerce.bigint().default(5000n)
 }).parse(process.env);

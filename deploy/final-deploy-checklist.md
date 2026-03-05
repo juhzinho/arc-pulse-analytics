@@ -101,6 +101,7 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
 METRICS_PORT=9100
 INDEXER_BOOTSTRAP_BLOCKS=5000
+INDEXER_FORCE_START_BLOCK=
 OTEL_EXPORTER_OTLP_ENDPOINT=
 OTEL_SERVICE_NAME=arc-pulse-indexer
 ```
@@ -119,6 +120,7 @@ pnpm --filter @arc-pulse/indexer start
 Rule:
 
 - run one replica only
+- for full historical backfill, set `INDEXER_FORCE_START_BLOCK=0`, let it sync, then remove this variable
 
 ## 5. Vercel envs
 

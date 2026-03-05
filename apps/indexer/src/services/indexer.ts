@@ -5,6 +5,8 @@ import { logger } from "../lib/logger";
 import { batchDurationMs, chainHeadGauge, indexedBlocksTotal, indexedTransactionsTotal, indexerLoopFailuresTotal, lastIndexedBlockGauge } from "../lib/observability";
 import { config } from "../config";
 
+let forceStartApplied = false;
+
 export async function runIndexerLoop() {
   while (true) {
     try {
@@ -30,12 +32,27 @@ async function indexLatestRange() {
   const initialBlock = config.INDEXER_START_BLOCK
     ?? (safeHead > config.INDEXER_BOOTSTRAP_BLOCKS ? safeHead - config.INDEXER_BOOTSTRAP_BLOCKS : 0n);
 
-  const state = checkpoint ?? await prisma.indexerState.create({
+  let state = checkpoint ?? await prisma.indexerState.create({
     data: {
       id: "arc-main",
       lastIndexedBlock: initialBlock
     }
   });
+
+  // Optional one-time rewind for historical backfill, safe because indexing uses idempotent upserts.
+  if (config.INDEXER_FORCE_START_BLOCK !== undefined && !forceStartApplied) {
+    const forcedStart = config.INDEXER_FORCE_START_BLOCK;
+    await prisma.indexerState.update({
+      where: { id: "arc-main" },
+      data: { lastIndexedBlock: forcedStart }
+    });
+    logger.warn({
+      previousLastIndexedBlock: state.lastIndexedBlock.toString(),
+      forcedLastIndexedBlock: forcedStart.toString()
+    }, "applied forced indexer start block for backfill");
+    forceStartApplied = true;
+    state = { ...state, lastIndexedBlock: forcedStart };
+  }
 
   const start = state.lastIndexedBlock + 1n;
   if (start > safeHead) return;
