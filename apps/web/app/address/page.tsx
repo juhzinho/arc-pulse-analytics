@@ -46,7 +46,7 @@ type Counterparty = {
 type SearchParams = {
   q?: string;
   page?: string;
-  window?: "1h" | "6h" | "24h" | "7d";
+  window?: "1h" | "6h" | "24h" | "7d" | "all";
   direction?: "in" | "out" | "all";
 };
 
@@ -108,7 +108,7 @@ export default async function AddressPage({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {(["1h", "6h", "24h", "7d"] as const).map((item) => {
+          {(["1h", "6h", "24h", "7d", "all"] as const).map((item) => {
             const href = address ? `/address?q=${address}&window=${item}&direction=${direction}` : `/address?window=${item}&direction=${direction}`;
             const active = item === window;
 
@@ -118,7 +118,7 @@ export default async function AddressPage({
                 href={href as Route}
                 className={active ? "surface-pill rounded-full border px-3 py-1.5 text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-ink" : "rounded-full border border-ink/10 px-3 py-1.5 text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-ink/60 transition hover:border-cyan/25 hover:text-ink dark:border-white/10 dark:text-white/64 dark:hover:text-white"}
               >
-                {item}
+                {item === "all" ? "ALL" : item}
               </Link>
             );
           })}
@@ -166,7 +166,7 @@ export default async function AddressPage({
             <Card className="rounded-[24px] p-5">
               <p className="eyebrow text-ink/46">Address</p>
               <p className="mt-3 text-[1.05rem] font-semibold tracking-[-0.03em] text-ink">{truncateMiddle(summary.address)}</p>
-              <p className="mt-2 text-[0.96rem] text-ink/62">Selected window: {window}</p>
+              <p className="mt-2 text-[0.96rem] text-ink/62">Selected window: {window === "all" ? "all-time" : window}</p>
             </Card>
             <Card className="rounded-[24px] p-5">
               <p className="eyebrow text-ink/46">Transactions</p>

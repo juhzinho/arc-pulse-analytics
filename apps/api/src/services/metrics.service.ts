@@ -66,7 +66,8 @@ export async function getTopContracts(
 
 export async function getAddressSummary(app: FastifyInstance, address: string, window: string) {
   const normalizedAddress = address.toLowerCase();
-  const interval = getWindowInterval(window);
+  const interval = window === "all" ? null : getWindowInterval(window);
+  const windowFilter = interval ? Prisma.sql`AND "blockTimestamp" >= NOW() - ${interval}` : Prisma.sql``;
   const [summary] = await app.prisma.$queryRaw<Array<{
     txCount: bigint;
     gasTotal: bigint;
@@ -88,7 +89,7 @@ export async function getAddressSummary(app: FastifyInstance, address: string, w
       MAX("blockTimestamp") AS "lastSeen"
     FROM "Transaction"
     WHERE ("fromAddress" = ${normalizedAddress} OR "toAddress" = ${normalizedAddress})
-      AND "blockTimestamp" >= NOW() - ${interval}
+      ${windowFilter}
   `);
 
   return {
@@ -109,6 +110,7 @@ export async function getAddressActivity(
   input: { address: string; page: number; pageSize: number; window?: string; direction?: "in" | "out" | "all" }
 ) {
   const normalizedAddress = input.address.toLowerCase();
+  const windowMs = input.window ? getWindowMs(input.window) : null;
   const where = {
     ...(input.direction === "out"
       ? { fromAddress: normalizedAddress }
@@ -120,10 +122,10 @@ export async function getAddressActivity(
               { toAddress: normalizedAddress }
             ]
           }),
-    ...(input.window
+    ...(windowMs
       ? {
           blockTimestamp: {
-            gte: new Date(Date.now() - getWindowMs(input.window))
+            gte: new Date(Date.now() - windowMs)
           }
         }
       : {})
@@ -159,7 +161,8 @@ export async function getAddressCounterparties(
   input: { address: string; window: string; limit: number }
 ) {
   const normalizedAddress = input.address.toLowerCase();
-  const interval = getWindowInterval(input.window);
+  const interval = input.window === "all" ? null : getWindowInterval(input.window);
+  const windowFilter = interval ? Prisma.sql`AND "blockTimestamp" >= NOW() - ${interval}` : Prisma.sql``;
 
   const rows = await app.prisma.$queryRaw<Array<{
     counterparty: string | null;
@@ -172,7 +175,7 @@ export async function getAddressCounterparties(
       COALESCE(SUM("gasUsed"), 0)::bigint AS "gasTotal"
     FROM "Transaction"
     WHERE "fromAddress" = ${normalizedAddress}
-      AND "blockTimestamp" >= NOW() - ${interval}
+      ${windowFilter}
       AND "toAddress" IS NOT NULL
     GROUP BY "toAddress"
     ORDER BY COUNT(*) DESC, COALESCE(SUM("gasUsed"), 0) DESC
@@ -266,8 +269,10 @@ function getWindowMs(window: string) {
       return 24 * 60 * 60 * 1000;
     case "7d":
       return 7 * 24 * 60 * 60 * 1000;
+    case "all":
+      return null;
     default:
-      return 24 * 60 * 60 * 1000;
+      return null;
   }
 }
 

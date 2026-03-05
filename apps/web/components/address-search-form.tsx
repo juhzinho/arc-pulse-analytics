@@ -10,6 +10,7 @@ export function AddressSearchForm() {
   const searchParams = useSearchParams();
   const [value, setValue] = useState(searchParams.get("q") ?? "");
   const window = searchParams.get("window") ?? "24h";
+  const direction = searchParams.get("direction") ?? "all";
 
   return (
     <form
@@ -19,6 +20,7 @@ export function AddressSearchForm() {
         const params = new URLSearchParams();
         if (value.trim()) params.set("q", value.trim());
         params.set("window", window);
+        params.set("direction", direction);
         router.push(`/address?${params.toString()}` as Route);
       }}
     >

@@ -46,11 +46,11 @@ export const transactionParamsSchema = z.object({
 });
 
 export const addressSummaryQuerySchema = z.object({
-  window: windowSchema.default("24h")
+  window: z.enum([...WINDOW_OPTIONS, "all"] as const).default("24h")
 });
 
 export const addressActivityQuerySchema = paginationSchema.extend({
-  window: windowSchema.optional(),
+  window: z.enum([...WINDOW_OPTIONS, "all"] as const).optional(),
   direction: z.enum(["in", "out", "all"]).default("all")
 });
 
